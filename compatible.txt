@@ -1,0 +1,49 @@
+tensorflow>=1.3.0 --> tensorflow>=2.0.0
+
+tf.sets.set_intersection -> tf.sets.intersection
+tf.sparse_tensor_to_dense -> tf.sparse.to_dense
+tf.to_float(tf.gather(class_ids, keep))[..., tf.newaxis] ->  tf.dtypes.cast(tf.gather(class_ids, keep), tf.float32)[..., tf.newaxis]
+tf.log() -> tf.math.log()
+tf.random_shuffle -> tf.random.shuffle
+
+# mrcnn_bbox = KL.Reshape((s[1], num_classes, 4), name="mrcnn_bbox")(x)
+if s[1]==None:
+mrcnn_bbox = layers.Reshape((-1, num_classes, 4), name="mrcnn_bbox")(x)
+else:
+mrcnn_bbox = layers.Reshape((s[1], num_classes, 4), name="mrcnn_bbox")(x)
+
+# indices = tf.stack([tf.range(probs.shape[0]), class_ids], axis=1)
+indices = tf.stack([tf.range(tf.shape(probs)[0]), class_ids], axis = 1)
+
+
+# from keras.engine import saving
+from tensorflow.python.keras.saving import hdf5_format
+
+# saving.load_weights_from_hdf5_group(f, layers)
+hdf5_format.load_weights_from_hdf5_group(f, layers)
+
+# ------------------------TRAIN MODEL-------------------------------
+# anchors = KL.Lambda(lambda x: tf.Variable(anchors), name="anchors")(input_image)
+# The sub-class must be modified as
+class AnchorsLayer(KL.Layer):
+    def __init__(self, anchors, name="anchors", **kwargs):
+        super(AnchorsLayer, self).__init__(name=name, **kwargs)
+        self.anchors = tf.Variable(anchors)
+
+    def call(self, dummy):
+        return self.anchors
+
+    def get_config(self):
+        config = super(AnchorsLayer, self).get_config()
+        return config
+# and the input is switched to
+anchors = AnchorsLayer(anchors, name="anchors")(input_image)
+
+# remove
+self.keras_model._losses = []
+self.keras_model._per_input_losses = {}
+
+# workers=workers,
+# use_multiprocessing=workers > 1,
+workers=1,
+use_multiprocessing=False
